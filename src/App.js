@@ -1,25 +1,139 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect } from "react";
+import "./App.css";
+import Alert from "./components/Alert";
+import List from "./components/List";
+import Form from "./components/Form";
+import uuid from "uuid/v4";
+
+// const initialExpenses = [
+//   { id: uuid(), charge: "rent", amount: 1534 },
+//   { id: uuid(), charge: "car", amount: 123 },
+//   { id: uuid(), charge: "water", amount: 56 },
+// ];
+
+const initialExpenses = localStorage.getItem("expenses")
+  ? JSON.parse(localStorage.getItem("expenses"))
+  : [];
 
 function App() {
+  //******************* state values *****************************//
+  //all expenses
+  const [expenses, setExpenses] = useState(initialExpenses);
+
+  //individual expense
+  const [charge, setCharge] = useState("");
+
+  //individual amount
+  const [amount, setAmount] = useState("");
+
+  //alert
+  const [alert, setAlert] = useState({ show: false });
+
+  //edit
+  const [edit, setEdit] = useState(false);
+
+  //edit individual item
+  const [id, setId] = useState(0);
+  //******************* end of state values *****************************//
+
+  //******************* useEffect *****************************//
+  useEffect(() => {
+    localStorage.setItem("expenses", JSON.stringify(expenses));
+  }, [expenses]);
+  //******************* end of useEffect *****************************//
+
+  //******************* functions *****************************//
+  const handleCharge = (event) => {
+    setCharge(event.target.value);
+  };
+
+  const handleAmount = (event) => {
+    setAmount(event.target.value);
+  };
+
+  const handleAlert = ({ type, text }) => {
+    setAlert({ show: true, type, text });
+    setTimeout(() => {
+      setAlert({ show: false });
+    }, 3000);
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (charge !== "" && amount > 0) {
+      if (edit) {
+        let tempExpenses = expenses.map((item) => {
+          return item.id === id ? { ...item, charge, amount } : item;
+        });
+        setExpenses(tempExpenses);
+        setEdit(false);
+      } else {
+        const singleExpense = {
+          id: uuid(),
+          charge,
+          amount,
+        };
+        setExpenses([...expenses, singleExpense]);
+        handleAlert({ type: "success", text: "Successfully Added The Item" });
+      }
+      setCharge("");
+      setAmount("");
+    } else {
+      handleAlert({ type: "danger", text: "Invalid Entry" });
+    }
+  };
+
+  const clearItems = () => {
+    setExpenses([]);
+  };
+
+  const handleDelete = (id) => {
+    let tempExpenses = expenses.filter((item) => item.id !== id);
+    setExpenses(tempExpenses);
+    handleAlert({ type: "success", text: "Successfuly Deleted" });
+  };
+
+  const handleEdit = (id) => {
+    let expense = expenses.find((item) => item.id === id);
+    let { charge, amount } = expense;
+    setCharge(charge);
+    setAmount(amount);
+    setEdit(true);
+    setId(id);
+  };
+
+  //******************* end of functions *****************************//
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <>
+      {alert.show && <Alert type={alert.type} text={alert.text} />}
+      <Alert />
+      <main className="App">
+        <Form
+          charge={charge}
+          amount={amount}
+          handleAmount={handleAmount}
+          handleCharge={handleCharge}
+          handleSubmit={handleSubmit}
+          edit={edit}
+        />
+        <List
+          expenses={expenses}
+          handleDelete={handleDelete}
+          handleEdit={handleEdit}
+          clearItems={clearItems}
+        />
+      </main>
+      <h1>
+        Total:{" "}
+        <span className="total">
+          $
+          {expenses.reduce((acc, curr) => {
+            return (acc += parseFloat(curr.amount));
+          }, 0)}
+        </span>
+      </h1>
+    </>
   );
 }
 
